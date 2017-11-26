@@ -10,7 +10,7 @@ class VerticalLSTMUGTSAlgorithm(UGTSAlgorithm):
             super().__init__()
             self.convs = []
             self.fcs = []
-            self.dropouts = [nn.Dropout()] * (len(hidden_features) + 1)
+            self.dropouts = [nn.Dropout() for _ in range(len(hidden_features) + 1)]
 
             in_channels = 1
             for out_channels, kernel_size in kernel_shapes:
@@ -40,7 +40,7 @@ class VerticalLSTMUGTSAlgorithm(UGTSAlgorithm):
         def __init__(self, payoff_size, update_size, hidden_features):
             super().__init__()
             self.fcs = []
-            self.dropouts = [nn.Dropout()] * (len(hidden_features) + 1)
+            self.dropouts = [nn.Dropout() for _ in range(len(hidden_features) + 1)]
 
             in_features = payoff_size
             for out_features in hidden_features + [update_size]:
@@ -91,7 +91,7 @@ class VerticalLSTMUGTSAlgorithm(UGTSAlgorithm):
         def __init__(self, payoff_size, statistic_size, hidden_features):
             super().__init__()
             self.fcs = []
-            self.dropouts = [nn.Dropout()] * len(hidden_features)
+            self.dropouts = [nn.Dropout() for _ in range(len(hidden_features) + 1)]
 
             in_features = statistic_size * 2
             for out_features in hidden_features + [payoff_size]:

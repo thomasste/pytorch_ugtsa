@@ -1,17 +1,18 @@
 from algorithms.algorithm import Algorithm
-from random import randint
+from random import randint, choice
 from recordclass import recordclass
+from threading import Lock
 
 import numpy as np
 
 
 class MCTSAlgorithm(Algorithm):
-    Node = recordclass('Node', 'number_of_visits children statistic')
+    Node = recordclass('Node', 'number_of_visits children statistic lock')
 
     def __init__(self, game_state, grow_factor):
         super().__init__(game_state)
         self.grow_factor = grow_factor
-        self.tree = []
+        self.root = None
 
     def statistic(self):
         raise NotImplementedError
@@ -28,57 +29,66 @@ class MCTSAlgorithm(Algorithm):
     def move_rate(self, parent_statistic, child_statistic):
         raise NotImplementedError
 
-    def improve(self):
-        if not self.tree:
-            self.tree.append(MCTSAlgorithm.Node(
+    def empty_tree(self):
+        root = MCTSAlgorithm.Node(
+            number_of_visits=0,
+            children=[],
+            statistic=self.statistic(),
+            lock=Lock())
+        for i in range(self.game_state.move_count()):
+            self.game_state.apply_move(i)
+            root.children.append(MCTSAlgorithm.Node(
                 number_of_visits=0,
-                children=(1, self.game_state.move_count() + 1),
-                statistic=self.statistic()))
-            for i in range(self.game_state.move_count()):
-                self.game_state.apply_move(i)
-                self.tree.append(MCTSAlgorithm.Node(
-                    number_of_visits=0,
-                    children=None,
-                    statistic=self.statistic()))
-                self.game_state.undo_move()
-        else:
-            stack = [0]
-            while self.tree[stack[-1]].children:
-                node = self.tree[stack[-1]]
-                node.number_of_visits += 1
+                children=None,
+                statistic=self.statistic(),
+                lock=Lock()))
+            self.game_state.undo_move()
+        return root
 
-                if self.game_state.player == -1:
-                    move = randint(0, node.children[1] - node.children[0] - 1)
+    def improve(self):
+        stack = [self.root]
+
+        while True:
+            node = stack[-1]
+            with node.lock:
+                if not node.children:
+                    break
                 else:
-                    parent_statistic = node.statistic
-                    children_statistics = [
-                        self.tree[c].statistic
-                        for c in range(node.children[0], node.children[1])]
-                    move = np.argmax([
-                         self.move_rate_as_numpy(self.move_rate(parent_statistic, s))[self.game_state.player]
-                         for s in children_statistics])
+                    node.number_of_visits += 1
 
-                stack.append(node.children[0] + move)
-                self.game_state.apply_move(move)
+                    if self.game_state.player == -1:
+                        move = randint(0, len(node.children) - 1)
+                    else:
+                        move_rates = [
+                             self.move_rate_as_numpy(self.move_rate(node.statistic, child.statistic))[self.game_state.player]
+                             for child in node.children]
 
-            leaf = self.tree[stack[-1]]
+                        move = choice(sorted([(mr, i) for i, mr in enumerate(move_rates)])[-2:])[1]
+
+                    stack.append(node.children[move])
+                    self.game_state.apply_move(move)
+
+        leaf = stack[-1]
+
+        with leaf.lock:
             leaf.number_of_visits += 1
 
             if not self.game_state.is_final() and leaf.number_of_visits == self.grow_factor:
-                move_count = self.game_state.move_count()
-                leaf.children = (len(self.tree), len(self.tree) + move_count)
-                for m in range(move_count):
+                leaf.children = []
+                for m in range(self.game_state.move_count()):
                     self.game_state.apply_move(m)
-                    self.tree.append(MCTSAlgorithm.Node(
+                    leaf.children.append(MCTSAlgorithm.Node(
                         number_of_visits=0,
                         children=None,
-                        statistic=self.statistic()))
+                        statistic=self.statistic(),
+                        lock=Lock()))
                     self.game_state.undo_move()
 
-            update = self.update()
+        update = self.update()
 
-            while stack:
-                node = self.tree[stack[-1]]
+        while stack:
+            node = stack[-1]
+            with node.lock:
                 statistic = node.statistic
                 node.statistic = self.modified_statistic(statistic, update)
                 stack.pop()
@@ -88,10 +98,8 @@ class MCTSAlgorithm(Algorithm):
                     self.game_state.undo_move()
 
     def move_rates(self):
-        root = self.tree[0]
-        parent_statistic = root.statistic
-        return [self.move_rate(parent_statistic, self.tree[c].statistic)
-                for c in range(root.children[0], root.children[1])]
+        return [self.move_rate(self.root.statistic, child.statistic)
+                for child in self.root.children]
 
     def move_rate_as_numpy(self, move_rate):
         raise NotImplementedError

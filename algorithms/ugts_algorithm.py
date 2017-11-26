@@ -1,6 +1,6 @@
 from algorithms.mcts_algorithm import MCTSAlgorithm
-import torch
 from torch.autograd import Variable
+import torch
 
 
 class UGTSAlgorithm(MCTSAlgorithm):
