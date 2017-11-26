@@ -11,13 +11,13 @@ ucb_algorithm = UCBAlgorithm(game_state, 5, np.sqrt(2))
 ugts_algorithm = VerticalLSTMUGTSAlgorithm(
     game_state=game_state,
     grow_factor=5,
-    statistic_size=100,
-    update_size=100,
-    statistic_kernel_shapes=[(16, 2), (32, 2)],
-    statistic_hidden_features=[100],
-    update_hidden_features=[100],
-    modified_statistic_layers=2,
-    modified_update_layers=2,
+    statistic_size=200,
+    update_size=200,
+    statistic_kernel_shapes=[(64, 2), (128, 2), (256, 2)],
+    statistic_hidden_features=[100, 100, 100],
+    update_hidden_features=[100, 100, 100],
+    modified_statistic_layers=4,
+    modified_update_layers=4,
     move_rate_hidden_features=[100])
 
 for i in range(10):

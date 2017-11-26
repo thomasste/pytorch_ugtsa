@@ -66,7 +66,9 @@ class VerticalLSTMUGTSAlgorithm(UGTSAlgorithm):
                 update,
                 (hs_0.view(self.layers, 1, self.hidden_size),
                  cs_0.view(self.layers, 1, self.hidden_size)))
-            return torch.cat([hs_n.view(1, 2 * self.hidden_size), cs_n.view(1, 2 * self.hidden_size)], 1)
+            return torch.cat([
+                hs_n.view(1, self.layers * self.hidden_size),
+                cs_n.view(1, self.layers * self.hidden_size)], 1)
 
     class ModifiedUpdate(nn.Module):
         def __init__(self, statistic_size, update_size, layers):
@@ -81,7 +83,9 @@ class VerticalLSTMUGTSAlgorithm(UGTSAlgorithm):
                 statistic,
                 (hs_0.view(self.layers, 1, self.hidden_size),
                  cs_0.view(self.layers, 1, self.hidden_size)))
-            return torch.cat([hs_n.view(1, 2 * self.hidden_size), cs_n.view(1, 2 * self.hidden_size)], 1)
+            return torch.cat([
+                hs_n.view(1, self.layers * self.hidden_size),
+                cs_n.view(1, self.layers * self.hidden_size)], 1)
 
     class MoveRate(nn.Module):
         def __init__(self, payoff_size, statistic_size, hidden_features):
